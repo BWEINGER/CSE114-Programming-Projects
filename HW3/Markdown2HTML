@@ -1,0 +1,126 @@
+//Brett Weinger
+//ID #: 111639717
+//Output file also printed to console for ease of viewing
+
+import java.util.*;
+import java.io.*;
+
+public class Markdown2HTML {
+	
+	public static void main(String[] args) {
+		String result = "";
+		try {
+			//Start of try block
+			File f = new File("input.txt");
+			Scanner sc = new Scanner(f);
+			File f2 = new File("output.txt");
+			Scanner sc2 = new Scanner(f2);
+			FileWriter fw = new FileWriter(f2);
+			PrintWriter pw = new PrintWriter(fw);
+			boolean isList = false;
+			int blankLines = 0;
+			result += "<!DOCTYPE html>\n<html>\n<head>\n<title>Results of Markdown Translation</title>\n</head>\n<body>";
+			while(sc.hasNextLine()) {
+				String temp = sc.nextLine();
+				if(!temp.equals("")) { //error if blank line
+					blankLines = 0;
+					if(temp.charAt(0) == '+' && isList == false) { //If we encounter a list item and we're not processing a list...
+						isList = true; //start processing
+						result += "\n<ul>"; //insert opening tag
+					}
+					if(temp.charAt(0) != '+' && isList == true) { //If we are currently processing a list but the line ends the list...
+						isList = false;
+						result += "\n</ul>";
+					}
+					if(temp.charAt(0) == '+' && isList == true) { //If we are currently processing a list...
+						temp = translateListItem(temp.substring(2, temp.length())); //Modify the line so that it's surrounded by tags and eliminates the '+ '.
+					}
+				} else { //If blank line
+					if(isList == true) {
+						isList = false;
+						result += "\n</ul>";
+					}
+					blankLines++;
+					if(blankLines == 2) {
+						result += "\n<p>";
+						blankLines = 0;
+					}
+				}
+				for(int i = 0; i < temp.length(); i++) { //Start looping through the line.
+					if(temp.charAt(i) == '*' && temp.charAt(i+ 1) == '*') { //If we find ** in the line...
+						for(int j = i + 2; j < temp.length() - 1; j++) { //loop through the rest of the line, starting after the **.
+							if(temp.charAt(j) == '*' && temp.charAt(j + 1) == '*') { //If we find a second pair of **...
+								temp = temp.substring(0, i) + translateStrongEmphasis(temp.substring(i + 2, j)) + temp.substring(j + 2, temp.length()); //update new line
+								break; //and stop if found.
+							} //Otherwise, keep looping...
+						} //and exit loop after reaching end of the line.
+					}
+					if(temp.charAt(i) == '*' && temp.charAt(i+1) != '*' && temp.indexOf('*', i + 1) != -1) {
+						temp = temp.substring(0, i) + translateEmphasis(temp.substring(i + 1, temp.indexOf('*', i + 1))) + temp.substring(temp.indexOf('*', i+ 1) + 1 , temp.length()); //finds all words wrapped in *. Also includes words between and in double *.
+					}
+					if(temp.charAt(i) == '!' && temp.charAt(i + 1) == '[') {
+						for(int j = i + 2; j < temp.length(); j++) {
+							if(temp.charAt(j) == ']' && temp.charAt(j + 1) == '(' && temp.indexOf(')', j + 2) != -1) {
+								temp = temp.substring(0, i) + translateImage(temp.substring(i + 2, j), temp.substring(j + 2, temp.indexOf(' ', j + 2)), temp.substring(temp.indexOf(' ', j + 2) + 1, temp.indexOf(')', temp.indexOf(' ', j + 2) + 1))) + temp.substring(temp.indexOf(')', temp.indexOf(' ', j + 2) + 1) + 1, temp.length()); //last argument goes from index after space to first ')' after space
+							}
+						}
+					}
+					if(temp.charAt(i) == '[') { //If we find a [
+						for(int j = i + 1; j < temp.length(); j++) { //loop through rest of line
+							if(temp.charAt(j) == ']' && temp.charAt(j + 1) == '(' && temp.indexOf(')', j + 2) != -1) { //And if there's a ]( and )...
+								temp = temp.substring(0, i) + translateHyperlink(temp.substring(i + 1, j), temp.substring(j + 2, temp.indexOf(')', j + 2))) + temp.substring(temp.indexOf(')', j + 2) + 1, temp.length()); //update new line accordingly
+								break;
+							}
+						}
+					}
+					if(temp.charAt(i) == '`' && temp.indexOf('`', i + 1) != -1) {
+						temp = temp.substring(0, i) + translateCode(temp.substring(i + 1, temp.indexOf('`', i + 1))) + temp.substring(temp.indexOf('`', i + 1) + 1, temp.length());
+					}
+				}
+				result += "\n" + temp;
+			}
+			if(isList == true) {
+				result += "\n</ul>";
+			}
+			result += "\n</body>\n</html>";
+			pw.print(result);
+			sc.close();
+			pw.close();
+			while(sc2.hasNextLine()) {
+				System.out.println(sc2.nextLine());
+			}
+			sc2.close();
+			//End of try block
+		} catch(FileNotFoundException i) {
+			System.out.println("One of the files cannot found!");
+		} catch(IOException i) {
+			System.out.println("Error writing to file. Result will be printed to console instead.");
+			System.out.println(result);
+		}
+	}
+	
+	/*1*/public static String translateEmphasis(String text) {
+		return "<em>" + text + "</em>";
+	}
+	
+	/*2*/public static String translateStrongEmphasis(String text) {
+		return "<strong>" + text + "</strong>";
+	}
+	
+	/*3*/public static String translateHyperlink(String linkText, String URL) {
+		return "<a href=\"" + URL + "\">" + linkText + "</a>";
+	}
+	
+	/*4*/public static  String translateImage(String altText, String imgPath, String titleText) {
+		return "<img src=\"" + imgPath + "\" alt=\"" + altText + "\" title=" + titleText + ">";
+
+	}
+	
+	/*5*/public static String translateCode(String text) {
+		return "<code>" + text + "</code>";
+	}
+	
+	/*6*/public static String translateListItem(String text) {
+		return "<li>" + text + "</li>";
+	}
+}

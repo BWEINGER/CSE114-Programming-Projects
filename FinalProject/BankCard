@@ -1,0 +1,293 @@
+//Brett Weinger
+//111639717
+
+import java.util.*;
+
+public abstract class BankCard {
+	private String cardholderName;
+	protected long cardNumber;
+	protected double currentBalance;
+	protected ArrayList<Transaction> transactions = new ArrayList<Transaction>();
+	
+	public BankCard(String cardholderName, long cardNumber) {
+		this.cardholderName = cardholderName;
+		this.cardNumber = cardNumber;
+		currentBalance = 0;
+	}
+	
+	public double balance() {
+		return currentBalance;
+	}
+	
+	public long number() {
+		return cardNumber;
+	}
+	
+	public String cardHolder() {
+		return cardholderName;
+	}
+	
+	public String toString() {
+		return "Card # " + cardNumber + "   Balance: $" + currentBalance;
+	}
+	
+	public abstract boolean addTransaction(Transaction t);
+	
+	public abstract void printStatement();
+}
+
+class CreditCard extends BankCard {
+	private int expiration;
+	protected double limit;
+	protected int suspicious;
+	protected boolean isFlagged;
+	protected String lastMerchant;
+	protected double fraudCharge;
+	
+	public CreditCard(String cardHolder, long cardNumber, int expiration, double limit) {
+		super(cardHolder, cardNumber);
+		this.expiration = expiration;
+		this.limit = limit;
+		suspicious = 0;
+		isFlagged = false;
+		lastMerchant = "";
+		fraudCharge = 0;
+		
+	}
+	
+	public CreditCard(String cardHolder, long cardNumber, int expiration) {
+		this(cardHolder, cardNumber, expiration, 500);
+	}
+	
+	public double limit() {
+		return limit;
+	}
+	
+	public double availableCredit() {
+		return limit - currentBalance;
+	}
+	
+	public int expiration() {
+		return expiration;
+	}
+	
+	public String toString() {
+		return super.toString() + ", expires on " + expiration;
+	}
+	
+	public boolean addTransaction(Transaction t) {
+		if(isFlagged == false) {
+			if(t.type().equals("debit") && t.amount() <= availableCredit()) {
+				currentBalance += t.amount();
+				transactions.add(t);
+				if(t.amount() <= 1.50 && suspicious == 0) {
+					suspicious++;
+					lastMerchant = t.merchant();
+					fraudCharge = t.amount();
+				} else if(t.amount() <= 1.50 && suspicious == 1 && t.merchant().equals(lastMerchant)) {
+					isFlagged = true;
+					transactions.add(new Transaction("credit", "Fraud compensation", fraudCharge));
+					transactions.add(new Transaction("credit", "Fraud compensation", t.amount()));
+				} else if(t.amount() > 1.50 || !t.merchant().equals(lastMerchant)) {
+					suspicious = 0;
+					lastMerchant = "";
+				}
+				return true;
+			} else if(t.type().equals("debit") && t.amount() > availableCredit()) {
+				suspicious = 0;
+				lastMerchant = "";
+				return false;
+			} else if(t.type().equals("credit")) {
+				currentBalance += t.amount();
+				transactions.add(t);
+				suspicious = 0;
+				lastMerchant = "";
+				return true;
+			} else {
+				suspicious = 0;
+				lastMerchant = "";
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	
+	public void printStatement() {
+		System.out.printf("Cardholder name: " + cardHolder() + ", Card number: " + cardNumber + ", Expiration date: " + expiration + ", Ending balance: %.2f.\n", currentBalance);
+		System.out.println(transactions);
+		if(isFlagged == true) {
+			System.out.println("Account flagged due to suspicious transactions.");
+		}
+	}
+	
+	public boolean getCashAdvance(double advance) {
+		suspicious = 0;
+		lastMerchant = "";
+		double fee = advance*0.05;
+		if((advance + fee) <= availableCredit()) {
+			currentBalance += advance;
+			currentBalance += fee;
+			transactions.add(new Transaction("advance", "CSEBank", advance));
+			transactions.add(new Transaction("fee", "Cash advance fee", fee));
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+
+class RewardsCard extends CreditCard {
+	protected int rewardPoints;
+	
+	public RewardsCard(String holder, long number, int expiration, double limit) {
+		super(holder, number, expiration, limit);
+		rewardPoints = 0;
+	}
+	
+	public RewardsCard(String holder, long number, int expiration) {
+		super(holder, number, expiration);
+		rewardPoints = 0;
+	}
+	
+	public int rewardsPoints() {
+		return rewardPoints;
+	}
+	
+	public boolean redeemPoints(int points) {
+		boolean adjustedPoints = false;
+		if(points <= rewardPoints) {
+			if(points > currentBalance*100) { //If trying to redeem more than able, adjust points to make balance zero
+				adjustedPoints = true;
+				System.out.println("Adjusting reward points");
+				points = (int)(currentBalance*100);
+			}
+			if(currentBalance > 0) { //If balance isn't negative, process transaction normally. Ensure balance is zero if points were adjusted.
+				currentBalance -= points/100.00;
+				if(adjustedPoints == true) {
+					currentBalance = 0;
+				}
+				rewardPoints -= points;
+				transactions.add(new Transaction("redemption", "CSEBank", points/100.00));
+				return true;
+			} else { //If balance is negative, don't do anything
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	
+	public String toString() {
+		return super.toString() + ", Reward points available: " + rewardPoints;
+	}
+	
+	public boolean addTransaction(Transaction t) {
+		if(t.type().equals("debit") && t.amount() <= availableCredit()) {
+			currentBalance += t.amount();
+			transactions.add(t);
+			rewardPoints += (int)(100*t.amount());
+			return true;
+		} else if(t.type().equals("debit") && t.amount() > availableCredit()) {
+			return false;
+		} else if(t.type().equals("credit")) {
+			currentBalance += t.amount();
+			transactions.add(t);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public void printStatement() {
+		System.out.printf("Cardholder name: " + cardHolder() + ", Card number: " + cardNumber + ", Expiration date: " + expiration() + ", Ending balance: %.2f, Reward points: " + rewardPoints + ".\n", currentBalance);
+		System.out.println(transactions);
+	}
+}
+
+class PrepaidCard extends BankCard {
+	public PrepaidCard(String cardHolder, long cardNumber, double balance) {
+		super(cardHolder, cardNumber);
+		currentBalance = balance;
+	}
+	
+	public PrepaidCard(String cardHolder, long cardNumber) {
+		super(cardHolder, cardNumber);
+	}
+	
+	public boolean addTransaction(Transaction t) {
+		if(t.type().equals("debit") && t.amount() <= currentBalance) {
+			currentBalance -= t.amount();
+			transactions.add(t);
+			return true;
+		} else if(t.type().equals("debit") && t.amount() > currentBalance) {
+			return false;
+		} else if(t.type().equals("credit")) {
+			currentBalance -= t.amount();
+			transactions.add(t);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public boolean addFunds(double amount) {
+		if(amount > 0) {
+			currentBalance += amount;
+			transactions.add(new Transaction("top-up", "User payment", -1*amount));
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public String toString() {
+		return "Card # " + cardNumber + "   Balance: $" + currentBalance;
+	}
+	
+	public void printStatement() {
+		System.out.printf("Cardholder name: " + cardHolder() + ", Card number: " + cardNumber + ", Ending balance: %.2f.\n", currentBalance);
+		System.out.println(transactions);
+	}
+}
+
+class CardList {
+	private ArrayList<BankCard> cards;
+	
+	public CardList() {
+		cards = new ArrayList<BankCard>();
+	}
+	
+	public void add(BankCard b) {
+		cards.add(b);
+	}
+	
+	public void add(int index, BankCard b) {
+		if(index >= 0 && index <= cards.size()) {
+			cards.add(index, b);
+		} else {
+			cards.add(b);
+		}
+	}
+	
+	public int size() {
+		return cards.size();
+	}
+	
+	public BankCard get(int index) {
+		if(index >= 0 && index < cards.size()) {
+			return cards.get(index);
+		} else {
+			return null;
+		}
+	}
+	
+	public int indexOf(long cardNumber) {
+		for(int i = 0; i < cards.size(); i++) {
+			if(cards.get(i).number() == cardNumber) {
+				return i;
+			}
+		}
+		return -1;
+	}
+}

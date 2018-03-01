@@ -1,0 +1,127 @@
+// CSE 114 Homework 1
+//
+// Fall 2017, Stony Brook University
+//
+// Name: Brett Weinger
+// SBU ID #: 111639717
+
+package homework1;
+
+import java.util.*; // needed for the Scanner class
+
+public class HomeworkOne
+{
+    public static void main (String [] args)
+    {
+        Scanner sc = new Scanner(System.in);
+        
+        // Test the getFees() method
+        System.out.print("Enter the starting account balance: ");
+        double bal = sc.nextDouble();
+        sc.nextLine(); // consume the extra newline character
+        System.out.print("Enter the number of checks that were written: ");
+        int checks = sc.nextInt();
+        sc.nextLine(); // consume extra newline
+        double fee = getFees(bal, checks);
+        System.out.println("You paid $" + fee + " in fees.\n");
+        
+        
+        // Test the addDivisors() method
+        System.out.print("Enter an integer to process: ");
+        int val = sc.nextInt();
+        sc.nextLine(); // consume any leftover newline characters
+        int sum = addDivisors(val);
+        System.out.println("Sum of proper divisors: " + sum + "\n");
+        
+        
+        // Test the getGender() method
+        System.out.print("Please enter the name of the Bynar you are speaking to: ");
+        String bName = sc.nextLine();
+        String gender = getGender(bName);
+        System.out.println("This Bynar is " + gender + "\n");
+        
+        
+        // Test the "index of coincidence" method
+        System.out.print("Enter a string to examine: ");
+        String s1 = sc.nextLine();
+        System.out.print("Enter another string to examine: ");
+        String s2 = sc.nextLine();
+        double index = coincidence(s1, s2);
+        System.out.println("These strings have an index of coincidence of " + index + "\n");
+
+    }
+    
+    
+    
+    // COMPLETE THE METHODS BELOW FOR HOMEWORK 1
+    
+    public static double getFees (double balance, int checks)
+    {
+        double total = 10;
+        balance = balance - 10;
+        if(balance < 400) {
+        	total = total + 15;
+        }
+        if(checks > 0 && checks <= 19) {
+        	total = total + 0.10*checks;
+        } else if(checks <= 39) {
+        	total = total + 0.08*checks;
+        } else if(checks <= 59) {
+        	total = total + 0.06*checks;
+        } else if(checks >= 60) {
+        	total = total + 0.04*checks;
+        };
+        return total;
+    }
+    
+    
+    public static int addDivisors (int input)
+    {
+        int i = 1;
+        int sum = 0;
+        while(i < input) {
+        	if(input % i == 0) {
+        		sum = sum + i;
+        	}
+        	i++;
+        }
+        return sum;
+    }
+    
+    
+    public static String getGender (String name)
+    {
+        int index = 0;
+        int ones = 0;
+        while(index <= name.length() - 1) {
+        	if(name.charAt(index) == '1') {
+        		ones++;
+        	}
+        	index++;
+        }
+        System.out.println(ones);
+        if(ones % 2 == 0) { //even number of 1s
+        	return "female";
+        } else {
+        	return "male"; //odd number of 1s
+        }
+    }
+    
+    
+    public static double coincidence (String first, String second)
+    {
+        int index = 0;
+        double matches = 0;
+        double length = first.length();
+        while(index <= length - 1) {
+        	if(first.charAt(index) == second.charAt(index)) {
+        		matches++;
+        	};
+        	index++;
+        }
+        double indexOfCoincidence = (matches/length)*100;
+        return indexOfCoincidence;
+    }
+    
+    
+}

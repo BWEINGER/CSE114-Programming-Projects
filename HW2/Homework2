@@ -1,0 +1,24 @@
+//Brett Weinger, 111639717
+
+import java.util.Scanner;
+
+public class Homework2 {
+	public static void main(String[] args) {
+		Scanner sc = new Scanner(System.in);
+		String str = sc.nextLine();
+		System.out.println(rollDice(str));
+	}
+	public static int rollDice(String s) {
+		int index = s.indexOf("d");
+		String s1 = s.substring(0,  index);
+		String s2 = s.substring(index +1, s.length());
+		int num = Integer.parseInt(s1);
+		int size = Integer.parseInt(s2);
+		int roll = 0;
+		for(int i = 1; i <= num; i++) {
+			int val = (int)(Math.random()*size) + 1;
+			roll += val;
+		}
+		return roll;
+	}
+}

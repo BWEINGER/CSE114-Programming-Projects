@@ -1,0 +1,154 @@
+//Brett Weinger
+//111639717
+// Driver class for the final project
+import java.util.*;
+import java.io.*;
+
+public class TransactionProcessor
+{
+	private static String getCardType (long number)
+	{
+		// Return a String indicating whether 'number' belongs to a 
+		// CreditCard, RewardsCard, or a PrepaidCard (or null if it's none
+		// of the three)
+		
+		String result;
+		
+		int firstTwo = Integer.parseInt(("" + number).substring(0,2));
+		
+		switch(firstTwo)
+		{
+			case 84:
+			case 85: result = "CreditCard"; break;
+			case 86:
+			case 87: result = "RewardsCard"; break;
+			case 88:
+			case 89: result = "PrepaidCard"; break;
+			default: result = null; // invalid card number
+		}
+		
+		return result;
+	}
+	
+	public static BankCard convertToCard(String data) {
+		Scanner sc = new Scanner(data);
+		long cardNum = sc.nextLong();
+		String tempOwner = sc.next();
+		for(int i = 0; i < tempOwner.length(); i++) {
+			if(tempOwner.charAt(i) == '_') {
+				tempOwner = tempOwner.substring(0,  i) + " " + tempOwner.substring(i + 1);
+			}
+		}
+		String cardOwner = tempOwner;
+		String cardType = getCardType(cardNum);
+		if(cardType.equals("CreditCard")) {
+			int cardExpiration = sc.nextInt();
+			if(sc.hasNext()) {
+				double cardLimit = sc.nextDouble();
+				sc.close();
+				return new CreditCard(cardOwner, cardNum, cardExpiration, cardLimit);
+			} else {
+				sc.close();
+				return new CreditCard(cardOwner, cardNum, cardExpiration);
+			}
+		} else if(cardType.equals("RewardsCard")) {
+			int cardExpiration = sc.nextInt();
+			if(sc.hasNext()) {
+				double cardLimit = sc.nextDouble();
+				sc.close();
+				return new RewardsCard(cardOwner, cardNum, cardExpiration, cardLimit);
+			} else {
+				sc.close();
+				return new RewardsCard(cardOwner, cardNum, cardExpiration);
+			}
+		} else if(cardType.equals("PrepaidCard")) {
+			if(sc.hasNext()) {
+				double cardBalance = sc.nextDouble();
+				sc.close();
+				return new PrepaidCard(cardOwner, cardNum, cardBalance);
+			} else {
+				sc.close();
+				return new PrepaidCard(cardOwner, cardNum);
+			}
+		} else {
+			sc.close();
+			return null;
+		}
+	}
+	
+	public static CardList loadCardData(String fName) {
+		CardList cl = new CardList();
+		try {
+			File f = new File(fName);
+			Scanner fileScanner = new Scanner(f);
+			while(fileScanner.hasNextLine()) {
+				BankCard b = convertToCard(fileScanner.nextLine());
+				if(b != null) {
+					cl.add(b);
+				}
+			}
+			fileScanner.close();
+			return cl;
+		} catch(IOException i) {
+			return null;
+		}
+	}
+	
+	public static void processTransactions(String filename, CardList c) {
+		String currentLine = "";
+		try {
+		File f2 = new File(filename);
+		Scanner tsc = new Scanner(f2);
+		while(tsc.hasNextLine()) {
+			currentLine = tsc.nextLine();
+			String [] splitLine = currentLine.split(" ");
+			long cNum = Long.parseLong(splitLine[0]);
+			int index = c.indexOf(cNum);
+			if(splitLine[1].equals("redeem")) {
+				int pointsToRedeem = Integer.parseInt(splitLine[2]);
+				RewardsCard rc = (RewardsCard)c.get(index);
+				rc.redeemPoints(pointsToRedeem);
+			} else if(splitLine[1].equals("top-up")) {
+				double amountOfMoney = Double.parseDouble(splitLine[2]);
+				PrepaidCard pc = (PrepaidCard)c.get(index);
+				pc.addFunds(amountOfMoney);
+			} else if(splitLine[1].equals("advance")) {
+				double cashAdvance = Double.parseDouble(splitLine[2]);
+				CreditCard cc = (CreditCard)c.get(index);
+				cc.getCashAdvance(cashAdvance);
+			} else {
+				String tempMerchant = splitLine[3];
+				for(int i = 0; i < tempMerchant.length(); i++) {
+					if(tempMerchant.charAt(i) == '_') {
+						tempMerchant = tempMerchant.substring(0,  i) + " " + tempMerchant.substring(i + 1);
+					}
+				}
+				Transaction t = new Transaction(splitLine[1], tempMerchant, Double.parseDouble(splitLine[2]));
+				BankCard bc = c.get(index);
+				bc.addTransaction(t);
+			}
+		}
+		tsc.close();
+		} catch(IOException i) {
+			return;
+		}
+	}
+	
+	public static void main (String[] args) {
+		Scanner usersc = new Scanner(System.in);
+		System.out.print("Enter the name of the card data file: ");
+		String name = usersc.nextLine();
+		CardList list = loadCardData(name);
+		if(list != null) {
+			System.out.print("Enter the name of a transaction data file: ");
+			String name2 = usersc.nextLine();
+			processTransactions(name2, list);
+			for(int i = 0; i < list.size(); i++) {
+				list.get(i).printStatement();
+			}
+		} else {
+			System.out.println("Unable to generate list of cards.");
+		}
+		usersc.close();
+	}
+}
